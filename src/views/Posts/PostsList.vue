@@ -10,7 +10,9 @@
 </template>
 
 <script setup lang="ts">
+import {getPostList} from "@/services/http/api/posts";
 
+const {} = getPostList()
 </script>
 
 <style scoped>
