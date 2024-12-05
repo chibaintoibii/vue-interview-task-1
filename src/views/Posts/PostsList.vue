@@ -29,13 +29,14 @@
         v-model="sortByValue"
         label="Sort by"
       />
-      <RawCheckbox label="Saved posts" v-model="isFavorite" />
+      <RawCheckbox label="Saved posts" v-model="isFavoriteFilter" />
     </div>
     <ul v-if="filteredSortedPosts.length > 0">
       <PostItem
         v-for="post in filteredSortedPosts"
         :key="post.id"
         :post="post"
+        @toggle-favorite="toggleFavorite"
       />
       <Pagination :last-page="lastPage" v-model="_page" />
     </ul>
@@ -58,6 +59,7 @@ import BaseButton from "@/components/Button/BaseButton.vue";
 import { usePostFormModal } from "@/views/Posts/Modal/usePostFormModal.ts";
 import RawCheckbox from "@/components/Checkbox/RawCheckbox.vue";
 import Pagination from "@/components/Table/Pagination.vue";
+import { useLocalStorage } from "@vueuse/core";
 
 const route = useRoute();
 const router = useRouter();
@@ -74,7 +76,19 @@ const limitOptions = ref([
 
 const selectedLimit = ref(Number(route.query._limit) || 10);
 
-const isFavorite = ref(false);
+const isFavoriteFilter = ref(false);
+const favorites = useLocalStorage<number[]>("favorites", []);
+function isFavorite(postId: number) {
+  return favorites.value.includes(postId);
+}
+
+function toggleFavorite(postId: number) {
+  if (isFavorite(postId)) {
+    favorites.value = favorites.value.filter((id) => id !== postId);
+  } else {
+    favorites.value.push(postId);
+  }
+}
 
 const sortByOptions = ref([
   { value: "id", name: "Id" },
@@ -122,7 +136,7 @@ const fetchedPosts = computed<PostItemProps[]>(() => {
       title: post.title,
       body: post.body,
       author: user?.name || "Unknown",
-      isFavorite: false,
+      isFavorite: isFavorite(post.id),
     };
   });
 });
@@ -135,7 +149,7 @@ const filteredPosts = computed<PostItemProps[]>(() => {
       post.title
         .toLowerCase()
         .includes(searchByPostTitle.value.toLowerCase()) &&
-      (!isFavorite.value || post.isFavorite)
+      (!isFavoriteFilter.value || post.isFavorite)
   );
 });
 

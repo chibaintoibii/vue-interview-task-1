@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { useMutation, useQuery } from "@tanstack/vue-query";
 import $api from "@/services/http";
-import { ComputedRef, toRaw } from "vue";
+import { ComputedRef, toRaw, MaybeRef } from "vue";
 
 export function getPostsList(filter: ComputedRef<GetPostsListParams>) {
   return useQuery({
@@ -35,7 +35,6 @@ export interface PostItemRequest {
 }
 
 export function useCreatePost() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: PostItemRequest) => {
       return $api
@@ -43,8 +42,28 @@ export function useCreatePost() {
         .then((res) => res.data);
     },
     mutationKey: ["create-post"],
-    onSuccess: () => {
-      queryClient.refetchQueries(["posts"]);
-    },
   });
+}
+
+export function getPostComments(
+  postId: number,
+  enabledForFetch: MaybeRef<boolean>
+) {
+  return useQuery({
+    queryFn: async () => {
+      return $api
+        .get<CommentItemResponse[]>(`/posts/${postId}/comments`)
+        .then((res) => res.data);
+    },
+    enabled: enabledForFetch,
+    queryKey: ["comments", postId],
+  });
+}
+
+export interface CommentItemResponse {
+  id: number;
+  name: string;
+  email: string;
+  body: string;
+  postId: number;
 }
