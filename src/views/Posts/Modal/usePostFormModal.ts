@@ -20,6 +20,7 @@ export function usePostFormModal(options: IPostFormModalProps) {
             modal.close();
             options.onClose?.();
           },
+          initialVal: options.initialVal,
         },
       }),
     },
@@ -31,11 +32,10 @@ export function usePostFormModal(options: IPostFormModalProps) {
 export interface IPostFormModalProps {
   onClose?: () => void;
   type: "create" | "edit";
-  initialVal?: Partial<IPost>;
-}
-
-export interface IPost {
-  id: number;
-  title: string;
-  body: string;
+  initialVal?: {
+    title: string;
+    body: string;
+    userId: number;
+    id: number;
+  };
 }

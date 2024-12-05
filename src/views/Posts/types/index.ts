@@ -3,5 +3,5 @@ export interface PostItemProps {
   title: string;
   body: string;
   author: string;
-  isFavorite: boolean;
+  userId: number;
 }

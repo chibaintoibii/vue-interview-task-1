@@ -1,11 +1,16 @@
 <template>
   <li
     class="grid grid-cols-20 p-2 border-2 rounded-md m-1 gap-x-2"
-    :class="{ 'bg-blue-100': post.isFavorite }"
+    :class="{ 'bg-blue-100': isFavorite }"
   >
-    <div class="flex items-center justify-center p-0">
-      <input type="checkbox" class="w-5 h-5" />
-      {{ post.id }}
+    <div class="flex items-center justify-between">
+      <input
+        class="w-4 h-4"
+        type="checkbox"
+        :checked="isSelected"
+        @change="handleToggleSelect"
+      />
+      {{ post.id }})
     </div>
     <div class="col-span-6">
       <h1><span class="font-semibold">Title:</span>{{ post.title }}</h1>
@@ -17,17 +22,17 @@
           ><IconComment class="w-4 h-4" />
           {{ enabledForFetch ? "Hide comments" : "Show comments" }}</BaseButton
         >
-        <BaseButton variant="success"
-          ><IconEdit class="w-4 h-4" /> Edit</BaseButton
-        >
-        <BaseButton variant="danger"
-          ><IconTrash class="w-4 h-4" /> Delete</BaseButton
-        >
         <BaseButton @click="handleToggleFavorite" variant="warning"
-          ><IconStar class="w-4 h-4" />{{
-            post.isFavorite ? "Remove from Favorites" : "Add to Favorites"
+          ><IconStar class="w-6 h-6" />{{
+            isFavorite ? "Remove from Favorites" : "Add to Favorites"
           }}
         </BaseButton>
+        <BaseButton variant="success" @click="handleEditPost"
+          ><IconEdit class="w-4 h-4" /> Edit</BaseButton
+        >
+        <BaseButton variant="danger" @click="handleDeletePost"
+          ><IconTrash class="w-4 h-4" /> Delete</BaseButton
+        >
       </div>
     </div>
     <div class="col-span-13">
@@ -61,27 +66,41 @@ import IconEdit from "@/assets/icons/IconEdit.vue";
 import IconTrash from "@/assets/icons/IconTrash.vue";
 import IconStar from "@/assets/icons/IconStar.vue";
 import IconComment from "@/assets/icons/IconComment.vue";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import {
   CommentItemResponse,
   getPostComments,
+  useDeletePost,
 } from "@/services/http/api/posts.ts";
 import { getUsers } from "@/services/http/api/users.ts";
+import { usePostFormModal } from "@/views/Posts/Modal/usePostFormModal.ts";
+import useConfirm from "@/components/Confirmation/useConfirm.ts";
+import { ToastType, useToast } from "@/components/Toast/ToastPlugin.ts";
 
 const props = defineProps<{
   post: PostItemProps;
+  isSelected: boolean;
+  isFavorite: boolean;
 }>();
 
-const emit = defineEmits(["toggleFavorite"]);
+const toast = useToast();
+
+const emit = defineEmits(["toggleFavorite", "toggleSelect"]);
 
 function handleToggleFavorite() {
-  console.log("handleToggleFavorite", props.post.id);
   emit("toggleFavorite", props.post.id);
 }
+
+const isPostSelected = ref(false);
+
+watch(isPostSelected, () => {
+  emit("toggleSelect", props.post.id);
+});
 
 const enabledForFetch = ref(false);
 const { data: commentsData } = getPostComments(props.post.id, enabledForFetch);
 const { data: users } = getUsers();
+const { mutate: deletePost } = useDeletePost();
 
 const comments = computed<IComment[]>(() => {
   return (commentsData.value || []).map((comment: CommentItemResponse) => {
@@ -102,6 +121,36 @@ export interface IComment {
   author: string;
   email: string;
   body: string;
+}
+
+function handleToggleSelect() {
+  emit("toggleSelect", props.post.id);
+}
+
+function handleEditPost() {
+  usePostFormModal({
+    type: "edit",
+    initialVal: {
+      title: props.post.title,
+      body: props.post.body,
+      userId: props.post.userId,
+      id: props.post.id,
+    },
+  }).open();
+}
+
+function handleDeletePost() {
+  useConfirm("Are you sure you want to delete this post?", () => {
+    deletePost(props.post.id, {
+      onSuccess: () => {
+        toast.open({
+          type: ToastType.SUCCESS,
+          timer: 3000,
+          message: "Post deleted successfully",
+        });
+      },
+    });
+  }).open();
 }
 </script>
 

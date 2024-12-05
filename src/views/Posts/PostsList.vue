@@ -31,12 +31,23 @@
       />
       <RawCheckbox label="Saved posts" v-model="isFavoriteFilter" />
     </div>
+    <div v-if="selectedPosts.length > 0">
+      <BaseButton variant="danger" @click="deleteSelectedPosts"
+        ><IconTrash class="w-6 h-6" />Delete</BaseButton
+      >
+      <BaseButton variant="warning" @click="addSelectedPostsToFavorites"
+        ><IconStar class="w-6 h-6" />Add to favorites</BaseButton
+      >
+    </div>
     <ul v-if="filteredSortedPosts.length > 0">
       <PostItem
         v-for="post in filteredSortedPosts"
+        :is-selected="isSelectedPost(post.id)"
+        :is-favorite="isFavorite(post.id)"
         :key="post.id"
         :post="post"
         @toggle-favorite="toggleFavorite"
+        @toggle-select="toggleSelectedPost"
       />
       <Pagination :last-page="lastPage" v-model="_page" />
     </ul>
@@ -60,11 +71,14 @@ import { usePostFormModal } from "@/views/Posts/Modal/usePostFormModal.ts";
 import RawCheckbox from "@/components/Checkbox/RawCheckbox.vue";
 import Pagination from "@/components/Table/Pagination.vue";
 import { useLocalStorage } from "@vueuse/core";
+import IconTrash from "@/assets/icons/IconTrash.vue";
+import IconStar from "@/assets/icons/IconStar.vue";
+import useConfirm from "@/components/Confirmation/useConfirm.ts";
 
 const route = useRoute();
 const router = useRouter();
 const filter = reactive({
-  _limit: Number(route.query.limit) || 10,
+  _limit: Number(route.query._limit) || 10,
 });
 
 const limitOptions = ref([
@@ -90,6 +104,17 @@ function toggleFavorite(postId: number) {
   }
 }
 
+const selectedPosts = ref<number[]>([]);
+const isSelectedPost = (postId: number) => selectedPosts.value.includes(postId);
+
+const toggleSelectedPost = (postId: number) => {
+  if (isSelectedPost(postId)) {
+    selectedPosts.value = selectedPosts.value.filter((id) => id !== postId);
+  } else {
+    selectedPosts.value.push(postId);
+  }
+};
+
 const sortByOptions = ref([
   { value: "id", name: "Id" },
   { value: "title", name: "Title" },
@@ -106,7 +131,7 @@ const _page = ref(Number(route.query._page) || 1);
 const selectedUserIds = ref<number[]>([]);
 
 const lastPage = computed(() => {
-  return Math.ceil(100 / selectedLimit.value);
+  return isFavoriteFilter ? 1 : Math.ceil(100 / selectedLimit.value);
 });
 
 const finalFilter = computed<GetPostsListParams>(() => {
@@ -136,6 +161,7 @@ const fetchedPosts = computed<PostItemProps[]>(() => {
       title: post.title,
       body: post.body,
       author: user?.name || "Unknown",
+      userId: post.userId,
       isFavorite: isFavorite(post.id),
     };
   });
@@ -149,7 +175,7 @@ const filteredPosts = computed<PostItemProps[]>(() => {
       post.title
         .toLowerCase()
         .includes(searchByPostTitle.value.toLowerCase()) &&
-      (!isFavoriteFilter.value || post.isFavorite)
+      (!isFavoriteFilter.value || isFavorite(post.id))
   );
 });
 
@@ -162,7 +188,11 @@ const filteredSortedPosts = computed<PostItemProps[]>(() => {
       return a.title.localeCompare(b.title);
     }
     if (sortByValue.value === "favorite") {
-      return a.isFavorite === b.isFavorite ? 0 : a.isFavorite ? -1 : 1;
+      return isFavorite(a.id) === isFavorite(b.id)
+        ? 0
+        : isFavorite(a.id)
+        ? -1
+        : 1;
     }
     return a.id - b.id;
   });
@@ -190,6 +220,22 @@ function showCreatePostModal() {
   usePostFormModal({
     type: "create",
   }).open();
+}
+
+function deleteSelectedPosts() {
+  useConfirm("Are you sure you want to delete selected posts?", () => {
+    console.log("delete");
+  }).open();
+}
+
+function addSelectedPostsToFavorites() {
+  useConfirm(
+    "Are you sure you want to add selected posts to favorites?",
+    () => {
+      favorites.value = [...favorites.value, ...selectedPosts.value];
+      selectedPosts.value = [];
+    }
+  ).open();
 }
 </script>
 

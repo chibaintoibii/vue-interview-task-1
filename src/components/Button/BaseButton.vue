@@ -1,14 +1,18 @@
 <template>
   <button
-      :id="id"
-      :class="[
+    :id="id"
+    :class="[
       variantColor,
       stroke ? 'stroke' : '',
-      size === 'sm' ? 'text-sm px-1 py-0' : size === 'lg' ? 'text-lg px-6 py-3' : 'py-2 px-3'
+      size === 'sm'
+        ? 'text-sm px-1 py-0'
+        : size === 'lg'
+        ? 'text-lg px-6 py-3'
+        : 'py-2 px-3',
     ]"
-      :disabled="disabled || loading"
-      class="btn"
-      type="button"
+    :disabled="disabled || loading"
+    class="btn"
+    type="button"
   >
     <span v-if="loading">
       <Loader class="w-6 h-6" />
@@ -19,19 +23,21 @@
 </template>
 
 <script setup lang="ts">
-import {computed} from "vue";
+import { computed } from "vue";
 import Loader from "@/components/Loader/Loader.vue";
 
 const props = defineProps<{
-  loading?: boolean
-  stroke?: boolean
-  disabled?: boolean
-  size?: 'sm' | 'md' | 'lg'
-  variant?: 'primary' | 'success' | 'danger' | 'warning'
-  id?: string
-}>()
+  loading?: boolean;
+  stroke?: boolean;
+  disabled?: boolean;
+  size?: "sm" | "md" | "lg";
+  variant?: "primary" | "success" | "danger" | "warning";
+  id?: string;
+}>();
 
-const variantColor = computed(() => (props.variant ? props.variant : 'primary'))
+const variantColor = computed(() =>
+  props.variant ? props.variant : "primary"
+);
 </script>
 
 <style scoped>
@@ -75,7 +81,7 @@ const variantColor = computed(() => (props.variant ? props.variant : 'primary'))
 }
 
 .btn.warning:not(.stroke) {
-  @apply bg-yellow-500 text-black;
+  @apply bg-yellow-500;
   @apply hover:bg-[#d48806];
 }
 

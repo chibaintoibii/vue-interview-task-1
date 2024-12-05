@@ -67,3 +67,27 @@ export interface CommentItemResponse {
   body: string;
   postId: number;
 }
+
+export interface UpdatePostRequest extends PostItemRequest {
+  id: number;
+}
+
+export function useEditPost() {
+  return useMutation({
+    mutationFn: async (data: UpdatePostRequest) => {
+      return $api
+        .put<PostItemResponse>(`/posts/${data.id}`, data)
+        .then((res) => res.data);
+    },
+    mutationKey: ["edit-post"],
+  });
+}
+
+export function useDeletePost() {
+  return useMutation({
+    mutationFn: async (postId: number) => {
+      return $api.delete(`/posts/${postId}`);
+    },
+    mutationKey: ["delete-post"],
+  });
+}
