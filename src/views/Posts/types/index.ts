@@ -1,8 +1,7 @@
-
 export interface PostItemProps {
-    id: number
-    title: string
-    content: string
-    author: string
-
+  id: number;
+  title: string;
+  body: string;
+  author: string;
+  isFavorite: boolean;
 }
