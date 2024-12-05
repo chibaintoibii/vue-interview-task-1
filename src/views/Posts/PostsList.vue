@@ -29,15 +29,19 @@
         v-model="sortByValue"
         label="Sort by"
       />
-      <RawCheckbox label="Saved posts" v-model="inFavorites" />
+      <RawCheckbox label="Saved posts" v-model="isFavorite" />
     </div>
-    <ul>
+    <ul v-if="filteredSortedPosts.length > 0">
       <PostItem
         v-for="post in filteredSortedPosts"
         :key="post.id"
         :post="post"
       />
+      <Pagination :last-page="lastPage" v-model="_page" />
     </ul>
+    <div v-else>
+      <h1 class="text-center">No posts found</h1>
+    </div>
   </div>
 </template>
 
@@ -53,17 +57,12 @@ import BaseInput from "@/components/Input/BaseInput.vue";
 import BaseButton from "@/components/Button/BaseButton.vue";
 import { usePostFormModal } from "@/views/Posts/Modal/usePostFormModal.ts";
 import RawCheckbox from "@/components/Checkbox/RawCheckbox.vue";
+import Pagination from "@/components/Table/Pagination.vue";
 
 const route = useRoute();
 const router = useRouter();
 const filter = reactive({
   _limit: Number(route.query.limit) || 10,
-});
-
-watch(filter, (newFilter) => {
-  _page.value = 1;
-  const rawFilter = toRaw(newFilter);
-  router.replace({ query: { ...rawFilter, _page: 1 } });
 });
 
 const limitOptions = ref([
@@ -75,7 +74,7 @@ const limitOptions = ref([
 
 const selectedLimit = ref(Number(route.query._limit) || 10);
 
-const inFavorites = ref(false);
+const isFavorite = ref(false);
 
 const sortByOptions = ref([
   { value: "id", name: "Id" },
@@ -83,19 +82,18 @@ const sortByOptions = ref([
   { value: "author", name: "Author" },
   { value: "favorite", name: "Favorite" },
 ]);
-watch(selectedLimit, (newLimit) => {
-  filter._limit = newLimit;
-  router.replace({ query: { ...toRaw(filter), _page: 1 } });
-});
 
 const sortByValue = ref<string>(route.query._sort?.toString() || "id");
-watch(sortByValue, (newSortBy) => {
-  router.replace({ query: { ...toRaw(filter), _page: 1, _sort: newSortBy } });
-});
 
 const searchByPostTitle = ref("");
 
 const _page = ref(Number(route.query._page) || 1);
+
+const selectedUserIds = ref<number[]>([]);
+
+const lastPage = computed(() => {
+  return Math.ceil(100 / selectedLimit.value);
+});
 
 const finalFilter = computed<GetPostsListParams>(() => {
   return {
@@ -114,8 +112,6 @@ const usersFilter = computed(() => {
   }));
 });
 
-const selectedUserIds = ref<number[]>([]);
-
 const fetchedPosts = computed<PostItemProps[]>(() => {
   return (postsData.value || []).map((post) => {
     const user = (usersData.value || []).find(
@@ -132,17 +128,15 @@ const fetchedPosts = computed<PostItemProps[]>(() => {
 });
 
 const filteredPosts = computed<PostItemProps[]>(() => {
-  return fetchedPosts.value
-    .filter(
-      (post) =>
-        (selectedUserIds.value.length === 0 ||
-          selectedUserIds.value.includes(post.id)) &&
-        post.title.toLowerCase().includes(searchByPostTitle.value.toLowerCase())
-    )
-    .map((post) => ({
-      ...post,
-      favorite: false,
-    }));
+  return fetchedPosts.value.filter(
+    (post) =>
+      (selectedUserIds.value.length === 0 ||
+        selectedUserIds.value.includes(post.id)) &&
+      post.title
+        .toLowerCase()
+        .includes(searchByPostTitle.value.toLowerCase()) &&
+      (!isFavorite.value || post.isFavorite)
+  );
 });
 
 const filteredSortedPosts = computed<PostItemProps[]>(() => {
@@ -160,6 +154,24 @@ const filteredSortedPosts = computed<PostItemProps[]>(() => {
   });
 });
 
+watch(_page, (newPage) => {
+  router.replace({ query: { ...toRaw(filter), _page: newPage } });
+});
+
+watch(selectedLimit, (newLimit) => {
+  filter._limit = newLimit;
+  router.replace({ query: { ...toRaw(filter), _page: 1 } });
+});
+
+watch(sortByValue, (newSortBy) => {
+  router.replace({ query: { ...toRaw(filter), _page: 1, _sort: newSortBy } });
+});
+
+watch(filter, (newFilter) => {
+  _page.value = 1;
+  const rawFilter = toRaw(newFilter);
+  router.replace({ query: { ...rawFilter, _page: 1 } });
+});
 function showCreatePostModal() {
   usePostFormModal({
     type: "create",
